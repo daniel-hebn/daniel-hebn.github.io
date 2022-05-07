@@ -1,0 +1,116 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1"><title>2019-10-24 elasticsearch 이슈 대응 (1) | greg.lee's blog</title><link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="/css/highlights/dracula.css"><link rel="canonical" href="https://daniel-hebn.github.io/2019/10/24/2019-10-24-elasticsearch-이슈-대응-1/">
+<meta name="description" content="사건의 개요19년 10월 24일 오후 즈음…언제나 그렇듯이 바쁜 일상 속에서 업무 중요도에 따라 잠시 미뤄뒀던 task 로 인해 오늘도 작은 이슈가 발생하였다.  아래 이미지와 같이 elasticsearch 에서 로그가 쌓이지 않는 이슈가…">
+<meta property="og:type" content="article">
+<meta property="og:title" content="2019-10-24 elasticsearch 이슈 대응 (1)">
+<meta property="og:url" content="https://daniel-hebn.github.io/2019/10/24/2019-10-24-elasticsearch-%EC%9D%B4%EC%8A%88-%EB%8C%80%EC%9D%91-1/">
+<meta property="og:site_name" content="greg.lee&#39;s blog">
+<meta property="og:description" content="사건의 개요19년 10월 24일 오후 즈음…언제나 그렇듯이 바쁜 일상 속에서 업무 중요도에 따라 잠시 미뤄뒀던 task 로 인해 오늘도 작은 이슈가 발생하였다.  아래 이미지와 같이 elasticsearch 에서 로그가 쌓이지 않는 이슈가…">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:image" content="https://daniel-hebn.github.io/images/logo/elastic.png">
+<meta property="article:published_time" content="2019-10-24T14:34:08.000Z">
+<meta property="article:modified_time" content="2022-05-07T15:26:21.090Z">
+<meta property="article:author" content="Lee Hee Chang">
+<meta property="article:tag" content="elasticsearch">
+<meta property="article:tag" content="logstash">
+<meta property="article:tag" content="kibana">
+<meta property="article:tag" content="maintenance">
+<meta property="article:tag" content="issue">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://daniel-hebn.github.io/images/logo/elastic.png"><meta property="article:author" content="Lee Hee Chang"><meta property="twitter:label1" content="Published at"><meta property="twitter:data1" content="2019-10-24 23:34:08"><meta property="twitter:label2" content="Written by"><meta property="twitter:data2" content="Lee Hee Chang"><link rel="icon" href="/images/rocket.png"><script>(function(i,s,o,g,r,a,m) {i['GoogleAnalyticsObject']=r;i[r]=i[r]||function() {
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+ga('create', 'G-1C42LL19JB', 'auto');
+ga('send', 'pageview');</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/feed.xml" title="greg.lee's blog" type="application/rss+xml">
+</head><body itemscope itemtype="https://schema.org/WebPage"><nav class="menu" id="menu"><div class="menu-inner"><div class="menu__left-area"><div class="menu__item"><a class="menu__item__link menu__item__link--brand" href="/" title="Home" rel="home"><img class="menu__item__link--brand__image" src="/images/rocket.png" alt="greg.lee's blog"><span class="menu__item__link--brand__label">greg.lee's blog</span></a></div></div><div class="menu__right-area"><div class="menu__item"><a class="menu__item__link" href="/">Home</a></div><div class="menu__item"><a class="menu__item__link" href="/about">About</a></div><div class="menu__item"><a class="menu__item__link" href="/archives">Archives</a></div></div></div></nav><div class="page-background"></div><div class="content-container"><div class="content-outer"><div class="content-inner" itemscope itemtype="https://schema.org/Blog"><article class="article" id="article" itemscope itemtype="https://schema.org/BlogPosting"><h1 class="article__title" itemprop="headline">2019-10-24 elasticsearch 이슈 대응 (1)</h1><div class="article__meta"><time class="article__meta__time" datetime="2019-10-24T14:34:08.000Z" itemprop="datePublished">2019-10-24 23:34:08</time><div class="article__meta__categories"><a class="article__meta__categories__item" href="/categories/elasticsearch/">elasticsearch</a><span class="article__meta__categories__separator">></span><a class="article__meta__categories__item" href="/categories/elasticsearch/maintenance/">maintenance</a></div></div><div class="article__contents"><img src="/images/logo/elastic.png"><h2 id="사건의-개요"><a href="#사건의-개요" class="headerlink" title="사건의 개요"></a>사건의 개요</h2><p>19년 10월 24일 오후 즈음…<br>언제나 그렇듯이 바쁜 일상 속에서 업무 중요도에 따라 잠시 미뤄뒀던 task 로 인해 <del>오늘도</del> 작은 이슈가 발생하였다. </p>
+<p>아래 이미지와 같이 elasticsearch 에서 로그가 쌓이지 않는 이슈가 발생하였고 그에 따라 업무에 필요한 로그 확인이 어려운 상황이었다. <del>심지어 로그가 쌓이지 않고 있다는 것도 너무 늦게 알았네</del> </p>
+<img src="/2019/10/24/2019-10-24-elasticsearch-%EC%9D%B4%EC%8A%88-%EB%8C%80%EC%9D%91-1/1.can't_save_log.png" class title="cant_save_log">
+
+<p><a href="https://daniel-hebn.github.io/2019/10/18/2019-10-18-Elastic-Stack-kafka-%EA%B8%B0%EB%B0%98%EC%9D%98-%EB%A1%9C%EA%B7%B8-%EC%88%98%EC%A7%91-%EB%B0%8F-%EB%AA%A8%EB%8B%88%ED%84%B0%EB%A7%81-%EA%B5%AC%EC%B6%95-1/#elastic-stack-amp-kafka">로그 수집에 대한 flow</a> 는 어렵지 않으므로 kafka 와 elasticsearch 사이에서 이슈 구간이 어디인지 알 수만 있다면, 문제 해결 자체는 어렵지 않을 것이라 생각하고 <del>늦게나마</del> 확인 작업을 시작하였다.</p>
+<br>
+
+<h3 id="logback-gt-kafka-구간-확인"><a href="#logback-gt-kafka-구간-확인" class="headerlink" title="logback -&gt; kafka 구간 확인"></a>logback -&gt; kafka 구간 확인</h3><p>우선 was 의 logback 에서 kafka 로의 메시지 전달에 문제가 없는지 확인하기 위해, kafka 의 <code>kafka-console-producer.sh</code> 을 실행하여 로그용 topic 에 메시지가 쌓이고 있는지를 확인하였다. </p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ /usr/<span class="built_in">local</span>/kafka/kafka-console-consumer.sh </span><br><span class="line">--bootstrap-server kafka-server1:9092,kafka-server2:9092,kafka-server3:9092 \</span><br><span class="line">--topic log-v1</span><br></pre></td></tr></table></figure>
+
+<p><code>--from-beginning</code> 옵션을 제거하면 <code>kafka-console-consumer.sh</code> 실행 이후의 시점부터 전달되는 메시지를 console 에 출력하게 된다. </p>
+<p>실행결과 was 의 logback -&gt; kafka 구간에서는 이슈 없이 메시지 전달이 정상적으로 이루어지고 있는 것을 확인하였다.</p>
+<img src="/2019/10/24/2019-10-24-elasticsearch-%EC%9D%B4%EC%8A%88-%EB%8C%80%EC%9D%91-1/4._kafka_console_log.png" class title="kafka_console_log">
+
+<br>
+
+<h3 id="kafka-gt-logstash-구간-확인"><a href="#kafka-gt-logstash-구간-확인" class="headerlink" title="kafka -&gt; logstash 구간 확인"></a>kafka -&gt; logstash 구간 확인</h3><p>다음으로 kafka 에서 logstash 구간을 확인하였다. kafka 자체의 동작에는 이슈가 없음을 확인하였기에, logstash 의 process 상태와 로그를 통하여 logstash 의 정상 동작 여부를 확인하고자 하였다.<br>logstash 의 로그 위치는 <code>/etc/logstash/logstash.yml</code> 에서의 <code>path.logs</code> 에 따라 <code>/var/log/logstash</code> 에 남고 있었고, 이를 <code>tail -f</code> 하여 실시간으로 로그를 확인하였다. </p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ cat /etc/logstash/logstash.yml | grep path.logs</span><br><span class="line">$ tail -f /var/<span class="built_in">log</span>/logstash/logstash-plain.log</span><br></pre></td></tr></table></figure>
+
+<p>그 때의 로그 상황은 다음과 같다.</p>
+<img src="/2019/10/24/2019-10-24-elasticsearch-%EC%9D%B4%EC%8A%88-%EB%8C%80%EC%9D%91-1/3_logstash_error_log.png" class title="logstash_error_log">
+
+<br>
+
+<p><code>FORBIDDEN</code> 이라는 <del>기분 나쁜</del> 문구와 함께 뭔가의 에러로그가 찍히고 있음을 확인하였다. </p>
+<p>해당 문구를 구글링했을 때 비교적 많은 검색 결과를 얻을 수 있었고, 이슈 발생 원인은 elasticsearch 가 사용하는 disk space 가 부족할 때 elasticsearch 의 down 을 막기 위해서, 문제 시점 이후로는 index 의 읽기와 삭제만 허용하도록 자동적으로 설정이 바뀌기 때문임을 알게 되었다 (elasticsearch 에서 해당 설정값은 <code>read_only_allow_delete=true</code> 이다)</p>
+<p>정리하면 </p>
+<ol>
+<li>elasticsearch 의 저장공간이 부족한 상황에서 추가적인 저장을 실행하면 elasticsearch 를 포함한 서버의 모든 프로세스가 영향을 받을 수 있기 때문에</li>
+<li>elasticsearch 가 자체적으로 저장 operation 을 차단시키는 설정으로 변경되었고</li>
+<li>이 후 kafka 에서 메시지를 읽어서 elasticsearch 에 저장하고자 했던 logstash 쪽에서 에러가 발생하는 것이었다.</li>
+</ol>
+<p>이 때, 필자는 elasticsearch 가 되게 스마트하다는 것에 감탄했었고, 이는 마치 MSA 에서 과도한 트래픽으로 인해 시스템이 다운되기전에 트래픽을 차단시키는 <code>circuit breaker</code> 와 맥락이 비슷하다는 것을 느꼈다.</p>
+<p>더 상세한 설명은 다음의 링크를 참고한다 </p>
+<ul>
+<li><a target="_blank" rel="external nofollow noopener noreferrer" href="https://stackoverflow.com/questions/48155774/elasticsearch-read-only-allow-delete-auto-setting?answertab=active#tab-top">참고 1</a></li>
+<li><a target="_blank" rel="external nofollow noopener noreferrer" href="https://help.aiven.io/en/articles/2303941-elasticsearch-watermark-levels">참고 2</a></li>
+<li><a target="_blank" rel="external nofollow noopener noreferrer" href="https://dev-yeon.tistory.com/12">참고 3</a></li>
+</ul>
+<p>어쨌든 문제 상황의 원인은 알았으니 빠르게 해결하는 일만 남았다.</p>
+<br>
+
+<h2 id="해결"><a href="#해결" class="headerlink" title="해결!"></a>해결!</h2><h3 id="단기-해결책"><a href="#단기-해결책" class="headerlink" title="단기 해결책"></a>단기 해결책</h3><p>elasticsearch 의 용량이 부족한 상황을 알았으니 우선 용량을 확보하는 것이 급선무였다. </p>
+<p>이를 위해</p>
+<ol>
+<li>elasticsearch 에서 오래된 index 삭제</li>
+<li>elasticsearch 의 설정값 <code>read_only_allow_delete</code> 를 false 로 변경  </li>
+</ol>
+<p>을 진행하였고, read_only_allow_delete 를 false 로 바꾸자마자 로그가 다시 들어오는 것을 확인하였다.</p>
+<p>read_only_allow_delete 를 false 로 바꿀 때에는 kibana 의 <code>Dev_tools</code> 메뉴를 이용하면 편리하다.</p>
+<img src="/2019/10/24/2019-10-24-elasticsearch-%EC%9D%B4%EC%8A%88-%EB%8C%80%EC%9D%91-1/readonly_allow_delete_false.png" class title="readonly_allow_delete_false">
+
+<br> 
+
+<p>read_only_allow_delete=false 를 실행하는 즉시 logstash 를 통하여 elasticsearch 에 데이터가 저장되기 시작한다.</p>
+<img src="/2019/10/24/2019-10-24-elasticsearch-%EC%9D%B4%EC%8A%88-%EB%8C%80%EC%9D%91-1/6._restore_logstash.png" class title="restore_logstash">
+
+<p><small> logstash 에서 elasticsearch 로의 output 이 성공하기 시작 </small></p>
+<img src="/2019/10/24/2019-10-24-elasticsearch-%EC%9D%B4%EC%8A%88-%EB%8C%80%EC%9D%91-1/7._restore_in_fast.png" class title="restore_in_fast">
+
+<p><small> 순식간에 로그가 복구됨 </small></p>
+<p>보통 elasticsearch 에 데이터를 저장할 때는 timestamp 를 기본 값으로 포함시키고, index 도 날짜를 기준으로 생성하는 것을 권장한다. 날짜별로 index 를 생성한다면 특정 기간이 지난 index 를 찾아서 삭제하기 쉽고, 날짜별 index 의 크기 및 특징을 확인하기에 편리한 장점이 있기 때문이다.</p>
+<p>또한, kibana 를 통해 로그를 검색할 때에는 <code>topic-*</code> 같은 패턴으로 <code>kibana index pattern</code> 을 생성하면 날짜와 상관없이 topic 별로 데이터 검색도 가능하다. (즉, elasticsearch 의 index 저장 시에 날짜별로 구분해도 문제가 없다는 뜻이다)</p>
+<p>참고로 필자가 근무하는 시스템의 logstash 에서는 elasticsearch 에 데이터를 저장할 때 아래와 같은 설정으로 저장하고 있다. <code>-%&#123;+YYYY.MM.dd&#125;&quot;</code> 를 선언하여 날짜별로 index 를 생성하는 것을 확인할 수 있다.  </p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">-- 설정 일부 </span><br><span class="line">output &#123;</span><br><span class="line">  elasticsearch &#123;</span><br><span class="line">       hosts =&gt; [<span class="string">&quot;elasticsearch1&quot;</span>,<span class="string">&quot;elasticsearch2&quot;</span>,<span class="string">&quot;elasticsearch3&quot;</span>,<span class="string">&quot;elasticsearch4&quot;</span>]</span><br><span class="line">       index =&gt; <span class="string">&quot;%&#123;es_index&#125;-%&#123;+YYYY.MM.dd&#125;&quot;</span></span><br><span class="line">       manage_template =&gt; <span class="literal">false</span></span><br><span class="line">     &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="근본-해결책"><a href="#근본-해결책" class="headerlink" title="근본 해결책"></a>근본 해결책</h3><p>근본적인 해결 방법은 elasticsearch 의 disk space 가 부족한 상황이 되지 않도록 환경을 만드는 것이다.</p>
+<p>이를 위해 </p>
+<ol>
+<li>elasticsearch 가 사용하기에 충분한 disk space 를 할당하고 </li>
+<li>주기적으로 오래된 index 를 제거하는 것</li>
+<li>disk 와 같은 리소스 부족 시 자동으로 notification 이루어지는 체계 구축 </li>
+</ol>
+<p>이 필요하다.</p>
+<p>1번의 경우, elasticsearch.yml 의 <code>path.data</code> 와 <code>path.logs</code> 를 변경한 후에 elasticsearch cluster 를 재시작하면 데이터 및 로그 저장 경로를 변경할 수 있다. 자세한 처리 방법은 다음의 링크를 참고한다 (<a target="_blank" rel="external nofollow noopener noreferrer" href="https://stackoverflow.com/questions/35143926/how-to-move-elasticsearch-data-directory">elasticsearch data 및 log 저장경로 변경</a>)</p>
+<p>2번의 경우, kibana 의 메뉴에서 <code>management &gt; Index Lifecycle Policies</code> 에서 특정 topic 에 대한 삭제 주기를 설정하면, 삭제 없이 index 가 무한정으로 증가하는 것을 막을 수 있다.</p>
+<p>아래 이미지는 kibana 의 <code>Index Lifecycle Policies</code> 의 상세 화면의 일부이다. <code>Maximum index size</code> 와 <code>Maximum age</code> 등을 통해서 용량별 / 기간별로 index 삭제 주기를 설정할 수 있다.</p>
+<img src="/2019/10/24/2019-10-24-elasticsearch-%EC%9D%B4%EC%8A%88-%EB%8C%80%EC%9D%91-1/10._kibana_index_delete_policy.png" class title="kibana_index_delete_policy">
+
+<br>
+
+<p>3번의 경우, 서비스가 동작하는 서버와 서비스에 대한 메트릭을 수집하는 다양한 방법이 존재하므로, 현재의 상황에 맞게 찾아서 적용하면 될 것이다. 핵심은 문제 상황 시 이를 자동으로 notification 하는 시스템을 구축하는 것이 중요하다는 것이다. (<del>집중해서 개발도 해야 하잖아</del>)</p>
+<h2 id="느낀점"><a href="#느낀점" class="headerlink" title="느낀점"></a>느낀점</h2><ul>
+<li>(언제나 그렇듯이) 원인만 알면 문제해결 자체는 쉬운 편이다.</li>
+<li>아무리 바빠도 최소한의 모니터링 체계는 갖추어야 한다.</li>
+<li><del>리소스는 많을수록 편하다</del></li>
+</ul>
+<br>
+
+<p>오늘의 장애일지 끝 ㅋㅋ</p>
+</div><div class="article__tags"><a class="article__tags__item" href="/tags/elasticsearch/">elasticsearch</a><a class="article__tags__item" href="/tags/logstash/">logstash</a><a class="article__tags__item" href="/tags/kibana/">kibana</a><a class="article__tags__item" href="/tags/maintenance/">maintenance</a><a class="article__tags__item" href="/tags/issue/">issue</a></div><div class="article__author" itemscope itemprop="author" itemtype="https://schema.org/Person"><img class="article__author__image" src="/images/greg_lee_c.png" alt="Lee Hee Chang"><a class="article__author__link" title="About Lee Hee Chang" rel="author">Lee Hee Chang</a><p class="article__author__desc">greg.lee 의 프로그래밍과 여러 생각에 대해 끄적이는 공간입니다.</p><div class="article__author__socials"></div><meta itemprop="name" content="Lee Hee Chang"></div><div class="sharer" id="sharer"><div class="sharer-inner"><div class="sharer__right"><button class="sharer__item" id="sharer-facebook"><i class="fa fa-facebook-official"></i></button><button class="sharer__item" id="sharer-twitter"><i class="fa fa-twitter"></i></button><button class="sharer__item" id="sharer-pinterest"><i class="fa fa-pinterest"></i></button><button class="sharer__item" id="sharer-pocket"><i class="fa fa-get-pocket"></i></button></div></div></div><!-- Disqus Code--><!-- Meta Tags for Structured Data--><meta itemprop="dateModified" content="2022-05-07T15:26:21.090Z"><meta itemprop="articleBody" content="사건의 개요19년 10월 24일 오후 즈음…언제나 그렇듯이 바쁜 일상 속에서 업무 중요도에 따라 잠시 미뤄뒀던 task 로 인해 오늘도 작은 이슈가 발생하였다. 
+아래 이미지와 같이 elasticsearch 에서 로그가 쌓이지 않는 이슈가 발생하였고 그에 따라 업무에 필요한 로그 확인이 어려운 상황이었다. 심지어 로그가 쌓이지 않고 있다는 것도 너무..."><meta itemprop="url" content="https://daniel-hebn.github.io/2019/10/24/2019-10-24-elasticsearch-이슈-대응-1/"><meta itemprop="mainEntityOfPage" content="https://daniel-hebn.github.io/2019/10/24/2019-10-24-elasticsearch-이슈-대응-1/"><div itemscope itemtype="https://schema.org/Organization" itemprop="publisher"><meta itemprop="name" content="greg.lee's blog"><div itemscope itemprop="logo" itemtype="https://schema.org/ImageObject"><meta itemprop="url" content="https://daniel-hebn.github.io/images/rocket.png"></div></div><div itemscope itemtype="https://schema.org/ImageObject" itemprop="image"><meta itemprop="contentUrl" content="https://daniel-hebn.github.io/images/logo/elastic.png"><meta itemprop="url" content="https://daniel-hebn.github.io/images/logo/elastic.png"><meta itemprop="width" content="360"><meta itemprop="height" content="180"></div></article><section class="related-posts"><h3>Related posts</h3><div class="related-posts__item__wrapper"><a class="related-posts__item" href="/2019/10/18/2019-10-18-elk-&amp;-kafka-%EA%B8%B0%EB%B0%98%EC%9D%98-%EB%A1%9C%EA%B7%B8-%EC%88%98%EC%A7%91-%EB%B0%8F-%EB%AA%A8%EB%8B%88%ED%84%B0%EB%A7%81-%EA%B5%AC%EC%B6%95-(1)/"><div class="related-posts__item__background" style="background-image:url('/images/logo/elastic.png');"></div><div class="related-posts__item__overlay"></div><span class="related-posts__item__title">elk &amp; kafka 기반의 로그 수집 및 모니터링 구축 (1)</span></a></div><div class="related-posts__item__wrapper"><a class="related-posts__item" href="/2019/10/20/2019-10-20-elk-&amp;-kafka-%EA%B8%B0%EB%B0%98%EC%9D%98-%EB%A1%9C%EA%B7%B8-%EC%88%98%EC%A7%91-%EB%B0%8F-%EB%AA%A8%EB%8B%88%ED%84%B0%EB%A7%81-%EA%B5%AC%EC%B6%95-(2)/"><div class="related-posts__item__background" style="background-image:url('/images/logo/elastic.png');"></div><div class="related-posts__item__overlay"></div><span class="related-posts__item__title">elk &amp; kafka 기반의 로그 수집 및 모니터링 구축 (2)</span></a></div></section></div></div></div><footer id="footer"><div class="widgets"><div class="widgets-inner"><!-- Jade doesn't support dynamic inclusion with `each`.--><!-- So, I just hard coded the file names that will be included.--><div class="widgets__item"><h3 class="widgets__item__heading">Recent posts</h3><ul class="recent-posts"><li class="recent-posts__item"><a href="/2021/09/16/2021-09-16-%EC%A0%9C%ED%92%88-%EA%B0%9C%EB%B0%9C%EC%A0%84%EC%97%90-%EA%B0%80%EC%9E%A5-%EB%A8%BC%EC%A0%80-%EC%83%9D%EA%B0%81%ED%95%B4%EB%B3%B4%EB%A9%B4-%EC%A2%8B%EC%9D%80-%EC%A7%88%EB%AC%B8/">제품 개발전에 가장 먼저 생각해보면 좋은 질문</a></li><li class="recent-posts__item"><a href="/2019/10/24/2019-10-24-elasticsearch-%EC%9D%B4%EC%8A%88-%EB%8C%80%EC%9D%91-1/">2019-10-24 elasticsearch 이슈 대응 (1)</a></li><li class="recent-posts__item"><a href="/2019/10/20/2019-10-20-elk-&amp;-kafka-%EA%B8%B0%EB%B0%98%EC%9D%98-%EB%A1%9C%EA%B7%B8-%EC%88%98%EC%A7%91-%EB%B0%8F-%EB%AA%A8%EB%8B%88%ED%84%B0%EB%A7%81-%EA%B5%AC%EC%B6%95-(2)/">elk &amp; kafka 기반의 로그 수집 및 모니터링 구축 (2)</a></li><li class="recent-posts__item"><a href="/2019/10/18/2019-10-18-elk-&amp;-kafka-%EA%B8%B0%EB%B0%98%EC%9D%98-%EB%A1%9C%EA%B7%B8-%EC%88%98%EC%A7%91-%EB%B0%8F-%EB%AA%A8%EB%8B%88%ED%84%B0%EB%A7%81-%EA%B5%AC%EC%B6%95-(1)/">elk &amp; kafka 기반의 로그 수집 및 모니터링 구축 (1)</a></li><li class="recent-posts__item"><a href="/2018/06/29/2018-06-29-ssh-%EC%82%AC%EC%9A%A9/">ssh 사용</a></li></ul></div><div class="widgets__item"><h3 class="widgets__item__heading">Archives</h3><ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/09/">9월 2021</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">10월 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">6월 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">4월 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">2월 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">1월 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">12월 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">6월 2017</a><span class="archive-list-count">1</span></li></ul></div><div class="widgets__item"><h3 class="widgets__item__heading">Categories</h3><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a><span class="category-list-count">5</span><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/performance/">performance</a><span class="category-list-count">5</span></li></ul></li><li class="category-list-item"><a class="category-list-link" href="/categories/design-pattern/">design-pattern</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/elasticsearch/">elasticsearch</a><span class="category-list-count">3</span><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/elasticsearch/maintenance/">maintenance</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/elasticsearch/monitoring/">monitoring</a><span class="category-list-count">2</span></li></ul></li><li class="category-list-item"><a class="category-list-link" href="/categories/http/">http</a><span class="category-list-count">1</span><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/http/RESTful/">RESTful</a><span class="category-list-count">1</span></li></ul></li><li class="category-list-item"><a class="category-list-link" href="/categories/java/">java</a><span class="category-list-count">2</span><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/java/concurrency/">concurrency</a><span class="category-list-count">2</span></li></ul></li><li class="category-list-item"><a class="category-list-link" href="/categories/spring/">spring</a><span class="category-list-count">1</span><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/spring/transaction/">transaction</a><span class="category-list-count">1</span></li></ul></li><li class="category-list-item"><a class="category-list-link" href="/categories/ssh/">ssh</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/%EC%9D%BC%ED%95%98%EB%8A%94%EB%B0%A9%EC%8B%9D/">일하는방식</a><span class="category-list-count">1</span><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/%EC%9D%BC%ED%95%98%EB%8A%94%EB%B0%A9%EC%8B%9D/%EC%A7%88%EB%AC%B8%ED%95%98%EA%B8%B0/">질문하기</a><span class="category-list-count">1</span></li></ul></li></ul></div></div></div><p class="copyright"><small>© 2022 Lee Hee Chang<br>Powered by <a href="https://hexo.io" rel="external nofollow noopener noreferrer" target="_blank">Hexo</a>, Theme by <a href="https://github.com/hyunseob" rel="external nofollow noopener noreferrer" target="_blank">HyunSeob</a></small></p></footer><script src="/js/sharer.min.js"></script></body></html>

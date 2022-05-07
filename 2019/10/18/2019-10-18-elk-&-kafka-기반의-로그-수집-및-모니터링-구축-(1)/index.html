@@ -1,0 +1,133 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1"><title>elk &amp; kafka 기반의 로그 수집 및 모니터링 구축 (1) | greg.lee's blog</title><link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="/css/highlights/dracula.css"><link rel="canonical" href="https://daniel-hebn.github.io/2019/10/18/2019-10-18-elk-&-kafka-기반의-로그-수집-및-모니터링-구축-(1)/">
+<meta name="description" content="모니터링의 중요성모니터링?IT 업무를 하면서 모니터링이라는 용어를 접해보지 않은 사람은 없을 것이다.  사놓기만 하고 아직 제대로 읽어보지 못한 사이트 신뢰성 엔지니어링 에서는 모니터링에 대한 정의를 아래와 같이 말하고 있다.   쿼리의 수와…">
+<meta property="og:type" content="article">
+<meta property="og:title" content="elk &amp; kafka 기반의 로그 수집 및 모니터링 구축 (1)">
+<meta property="og:url" content="https://daniel-hebn.github.io/2019/10/18/2019-10-18-elk-&-kafka-%EA%B8%B0%EB%B0%98%EC%9D%98-%EB%A1%9C%EA%B7%B8-%EC%88%98%EC%A7%91-%EB%B0%8F-%EB%AA%A8%EB%8B%88%ED%84%B0%EB%A7%81-%EA%B5%AC%EC%B6%95-(1)/">
+<meta property="og:site_name" content="greg.lee&#39;s blog">
+<meta property="og:description" content="모니터링의 중요성모니터링?IT 업무를 하면서 모니터링이라는 용어를 접해보지 않은 사람은 없을 것이다.  사놓기만 하고 아직 제대로 읽어보지 못한 사이트 신뢰성 엔지니어링 에서는 모니터링에 대한 정의를 아래와 같이 말하고 있다.   쿼리의 수와…">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:image" content="https://daniel-hebn.github.io/images/logo/elastic.png">
+<meta property="article:published_time" content="2019-10-18T14:30:00.000Z">
+<meta property="article:modified_time" content="2022-05-07T15:25:27.221Z">
+<meta property="article:author" content="Lee Hee Chang">
+<meta property="article:tag" content="elasticsearch">
+<meta property="article:tag" content="logstash">
+<meta property="article:tag" content="kibana">
+<meta property="article:tag" content="monitoring">
+<meta property="article:tag" content="log">
+<meta property="article:tag" content="metric">
+<meta property="article:tag" content="kafka">
+<meta property="article:tag" content="zookeeper">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://daniel-hebn.github.io/images/logo/elastic.png"><meta property="article:author" content="Lee Hee Chang"><meta property="twitter:label1" content="Published at"><meta property="twitter:data1" content="2019-10-18 23:30:00"><meta property="twitter:label2" content="Written by"><meta property="twitter:data2" content="Lee Hee Chang"><link rel="icon" href="/images/rocket.png"><script>(function(i,s,o,g,r,a,m) {i['GoogleAnalyticsObject']=r;i[r]=i[r]||function() {
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+ga('create', 'G-1C42LL19JB', 'auto');
+ga('send', 'pageview');</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/feed.xml" title="greg.lee's blog" type="application/rss+xml">
+</head><body itemscope itemtype="https://schema.org/WebPage"><nav class="menu" id="menu"><div class="menu-inner"><div class="menu__left-area"><div class="menu__item"><a class="menu__item__link menu__item__link--brand" href="/" title="Home" rel="home"><img class="menu__item__link--brand__image" src="/images/rocket.png" alt="greg.lee's blog"><span class="menu__item__link--brand__label">greg.lee's blog</span></a></div></div><div class="menu__right-area"><div class="menu__item"><a class="menu__item__link" href="/">Home</a></div><div class="menu__item"><a class="menu__item__link" href="/about">About</a></div><div class="menu__item"><a class="menu__item__link" href="/archives">Archives</a></div></div></div></nav><div class="page-background"></div><div class="content-container"><div class="content-outer"><div class="content-inner" itemscope itemtype="https://schema.org/Blog"><article class="article" id="article" itemscope itemtype="https://schema.org/BlogPosting"><h1 class="article__title" itemprop="headline">elk &amp; kafka 기반의 로그 수집 및 모니터링 구축 (1)</h1><div class="article__meta"><time class="article__meta__time" datetime="2019-10-18T14:30:00.000Z" itemprop="datePublished">2019-10-18 23:30:00</time><div class="article__meta__categories"><a class="article__meta__categories__item" href="/categories/elasticsearch/">elasticsearch</a><span class="article__meta__categories__separator">></span><a class="article__meta__categories__item" href="/categories/elasticsearch/monitoring/">monitoring</a></div></div><div class="article__contents"><img src="/images/logo/elastic.png"><h2 id="모니터링의-중요성"><a href="#모니터링의-중요성" class="headerlink" title="모니터링의 중요성"></a>모니터링의 중요성</h2><h3 id="모니터링"><a href="#모니터링" class="headerlink" title="모니터링?"></a>모니터링?</h3><p>IT 업무를 하면서 모니터링이라는 용어를 접해보지 않은 사람은 없을 것이다. </p>
+<p><del>사놓기만 하고 아직 제대로 읽어보지 못한</del> <a target="_blank" rel="external nofollow noopener noreferrer" href="https://jpub.tistory.com/756">사이트 신뢰성 엔지니어링</a> 에서는 모니터링에 대한 정의를 아래와 같이 말하고 있다. </p>
+<blockquote>
+<p>쿼리의 수와 종류, 에러의 수와 종류, 처리 시간 및 서버의 활동 시간 등 시스템에 대한 정량적 실시간 데이터를 모으고 처리하고 집계해서 보여주는 것을 말한다. (참고: 사이트 신뢰성 엔지니어링. 64p. 제이펍출판사)</p>
+</blockquote>
+<p>필자는 특정 기능에 대한 구현과 전반적인 아키텍처 설계만큼이나 모니터링이 정말로 중요하다고 생각하는데, 이는 자신이 구현하고 관리하는 시스템의 상태를 지속적으로 관찰하고, 문제가 발견될 때마다 능동적으로 대응하는 것은 서비스 운영의 필수 요소라고 생각하기 때문이다.</p>
+<p>그렇기 때문에 실력이나 경력을 막론하고 자신이 맡은 서비스와 회사의 전반적인 시스템에 대한 모니터링을 열심히 하는 개발자에게 애정이 큰 편이다. <del>자기 서비스에 대한 모니터링도 안하는 인간들하고는 같이 일하기 싫은 것이 당연지사</del></p>
+<p><code>작전의 실패는 용서할 수 있어도, 경계의 실패는 용서할 수 없다</code> 는 더글러스 맥아더의 말이 없더라도.. 모니터링은 너무도 당연하고 중요한 업무가 아니던가?  </p>
+<h3 id="그런데-현실은"><a href="#그런데-현실은" class="headerlink" title="그런데.. 현실은?"></a>그런데.. 현실은?</h3><p>개발자는 항상 바쁘다. 같이 일하는 디자이너와 PO 도 바쁘고 모두 바쁘다. 그리고 일은 항상 많다. 눈 앞의 업무, 이번 스프린트 안에 끝내야 하는 업무, 분기 안에 달성해야 하는 업무 등등을 생각하면.. 일은 항상 많고 바쁜 것이 IT 쪽의 현실이 아닐까 한다.</p>
+<p>그래도 <del>쿠팡이나 토스처럼</del> 모니터링 시스템이 이미 잘 구축되어 있고, 이를 전담하는 팀이 별도로 존재한다면 모니터링 구축에 대한 부담은 없기 때문에, 이슈 발생 시마다 모니터링에 기반한 알람을 바탕으로 이슈를 대응하거나, 지속적으로 매트릭의 추이를 관찰하면서 서비스 안정성을 유지하기 위한 next action item 을 도출할 수 있겠지만..</p>
+<p>문제는 <del>모니터링의 중요성을 아예 모르거나</del> 현재 일하는 회사에서 모니터링 시스템이 구축되어 있지 않고, 그것을 구축하기에는 리소스가 너무 부족한 상황이 아닐까 한다.  </p>
+<p>멀리 볼 것도 없이 필자가 19년 8월부터 겪게 되었던 상황이 바로 그 상황이었다. 신규 시스템에서 기능을 구현하고 운영해야 하는 상황이었는데 - 워낙 빠르고 바쁘게 돌아가는 상황 속에서 시스템에 대한 모니터링 구축이 가능한 리소스가 전혀 없었고, 그랬기 때문에 로그 및 메트릭 수집, 이를 기반한 알림이 미흡한 상황이었다.   </p>
+<p>결국 10월에 성능 이슈와 함께 시스템이 급격히 느려진 때가 있었는데, 메트릭 수집과 모니터링이 있었다면 단숨에 이슈를 잡았거나 이슈 발생 전에 미리 대응이 가능했겠지만 - 그 때는 그게 없었고 조금 긴 시간 후에 원인을 찾아 대응할 수 있었다. </p>
+<h2 id="구축에-대한-원칙과-실행-계획"><a href="#구축에-대한-원칙과-실행-계획" class="headerlink" title="구축에 대한 원칙과 실행 계획"></a>구축에 대한 원칙과 실행 계획</h2><p>1주일 정도의 리소스를 사용하여 모니터링 시스템을 구축하기로 결정한 후에, 아래와 같은 원칙을 세우고 관련한 stack 을 찾아봤다.</p>
+<ol>
+<li>널리 쓰이고 검증된 기술을 사용하고 싶다</li>
+<li>구축과 유지보수에 큰 노력이 들지 않았으면 한다</li>
+<li>메트릭 수집과 로그 수집, 그것에 기반한 알림 기능이 가능해야 한다.</li>
+<li>보기에 예뻐야 한다. <del>예뻐야 자주 본다</del></li>
+</ol>
+<p>그에 따라 이미 적당히 익숙하고 검증된 <code>elastic stack</code> 에 <code>kafka</code> 를 이용한 <code>로그 및 메트릭 수집</code> 을 구축하기로 하였다. </p>
+<p>참고로.. <code>AWS</code> 나 <code>google cloud</code>, <code>azure</code> 와 같은 클라우드 기반에서 업무가 가능하다면 당연히 그 쪽의 서비스를 이용했겠지만, 필자가 근무하는 <a target="_blank" rel="external nofollow noopener noreferrer" href="https://team.toss.im/">회사</a>는 금융을 다루는 곳이기에 자체적인 서버 내에서 모니터링을 구축해야 하는 상황이었다. (<del>회사 좋아요. 지원 강추</del>)</p>
+<p>사실 elastic stack 은 14년부터 지속적으로 사용해왔고, 해당 stack 에 대한 기술적인 지식이 약간은 있었기 때문에 선택에 있어서 크게 고민되는 점은 없었다. 다만, 과거에는 이미 누군가가 만들어놓은 elastic stack 을 활용하면서 모니터링에 참여했었다면, 지금은 내가 나와 동료를 위해 이것을 만들고 사용하고 운영해야 하는 것에서 기존과 다른 차이점이 있었다.</p>
+<h2 id="elastic-stack-amp-kafka"><a href="#elastic-stack-amp-kafka" class="headerlink" title="elastic stack &amp; kafka"></a>elastic stack &amp; kafka</h2><p>운영 시스템의 규모와 각 stack 의 특징, 모니터링에 투입 가능한 시스템 자원 등을 고려하여 구상한 전반적인 아키텍처는 아래와 같다.</p>
+<img src="/2019/10/18/2019-10-18-elk-&-kafka-%EA%B8%B0%EB%B0%98%EC%9D%98-%EB%A1%9C%EA%B7%B8-%EC%88%98%EC%A7%91-%EB%B0%8F-%EB%AA%A8%EB%8B%88%ED%84%B0%EB%A7%81-%EA%B5%AC%EC%B6%95-(1)/elastic_kafka_architecture.png" class title="elasticsearch &amp; kafka Architecture">
+
+<table>
+<thead>
+<tr>
+<th></th>
+<th>설치1</th>
+<th>설치2</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>서버1</td>
+<td>zookeeper1</td>
+<td>elasticsearch1</td>
+</tr>
+<tr>
+<td>서버2</td>
+<td>zookeeper2</td>
+<td>elasticsearch2</td>
+</tr>
+<tr>
+<td>서버3</td>
+<td>zookeeper3</td>
+<td>elasticsearch3</td>
+</tr>
+<tr>
+<td>서버4</td>
+<td>zookeeper4</td>
+<td>elasticsearch4</td>
+</tr>
+<tr>
+<td>서버5</td>
+<td>zookeeper5</td>
+<td>kibana</td>
+</tr>
+<tr>
+<td>서버6</td>
+<td>kafka1</td>
+<td>logstash1</td>
+</tr>
+<tr>
+<td>서버7</td>
+<td>kafka2</td>
+<td>logstash2</td>
+</tr>
+<tr>
+<td>서버8</td>
+<td>kafka3</td>
+<td>logstash3</td>
+</tr>
+</tbody></table>
+<p><small>서버 사양은 모두  cpu: 8 core / mem: 8G / disk: SSD 30G</small><br><br></p>
+<h3 id="구성의-근거"><a href="#구성의-근거" class="headerlink" title="구성의 근거"></a>구성의 근거</h3><p>비교적 적은 리소스로 메트릭과 로그 수집이 가능한 시스템을 만들고 싶지만, 카프카 클러스터의 복제(replication)와 브로커 서버들의 물리적인 위치를 고려하면서 구축하는 수준은 고려하지 않았다. 추후 확장이 필요한 상황이 생긴다면 그 때 처리하는 것으로…</p>
+<p>시스템에 할당된 리소스마다 다르겠지만 해당 구성에서 초당 800여건 / 분당 5만여건의 메시지를 무리없이 처리하는 것을 확인하였다. 현재는 그 이상의 메시지 처리를 받을 일은 없기 때문에 적절한 수준의 성능이라고 생각하고 있다.</p>
+<br>
+
+<h4 id="zookeeper"><a href="#zookeeper" class="headerlink" title="zookeeper"></a>zookeeper</h4><p><code>주키퍼</code>의 클러스터를 <code>앙상블</code>(ensemble) 이라고 하며, 하나의 앙상블은 여러 개의 서버(노드)를 맴버로 가질 수 있다. 주키퍼 앙상블은 다섯 개의 서버 노드로 구성하는 것을 추천한다. 그 이유는 다음과 같다.</p>
+<p>앙상블의 구성을 변경(ex. 노드 교체) 하려면 한 번에 하나의 서버 노드를 중단했다가 다시 로딩해야 한다. 그러나 만일 하나 이상의 노드를 중단할 수 없는 앙상블이라면 유지보수 작업에 위험이 따르게 된다. </p>
+<p>그리고 서버가 너무 많으면 오히려 성능이 저하될 수 있으므로 노드를 다섯 개보다 많게 구성하는 것은 바람직하지 않다. (참고: 카프카 핵심 가이드. 22p. 제이펍출판사)</p>
+<br>
+
+<h4 id="kafka"><a href="#kafka" class="headerlink" title="kafka"></a>kafka</h4><p><code>카프카</code>의 브로커 및 파티션 개수 산정은 당연히 단위 시간당 메시지 처리량을 고려하여 산정되어야 한다. 허나 시스템의 전반적인 메시지 처리량에 대한 예측이 어렵다면 우선은 메트릭과 로그 수집에 대한 시스템을 구축하여 사용하면서, 필요 시 브로커의 수를 늘리는 것도 방법이 될 수 있다. (클러스터에 브로커를 추가하는 것은 전혀 어려운 것이 아니기 때문에)</p>
+<p>하나의 카프카 서버로도 잘 동작할 수 있지만, 다수의 브로커로 하나의 클러스터를 구성하면 장점이 많다. 다수의 서버로 처리량을 분산시켜 확장할 수 있고, 각 서버의 장애에 따른 데이터 유실을 막기 위해 복제(<code>replication</code>)를 사용 할 수도 있다. 복제를 사용하면 현재 사용 중인 카프카 시스템을 중단시키지 않고 유지보수 작업을 수행할 수도 있다. </p>
+<p>필자의 경우는 큰 고민 없이 브로커 3개를 하나의 클러스터로 구성하였다.  </p>
+<br>
+
+<h4 id="elasticsearch"><a href="#elasticsearch" class="headerlink" title="elasticsearch"></a>elasticsearch</h4><p><code>엘라스틱서치</code>에 관한 설치와 설정은 엘라스틱서치에서 일하고 계신 <a target="_blank" rel="external nofollow noopener noreferrer" href="http://kimjmin.net/2018/01/2018-01-setting-es-cluster-1/">김종민님의 블로그</a> 를 적극 활용하였다. 엘라스틱서치의 경우는 구글링하면 공식 사이트와 여러 곳에서 다양한 인사이트를 쉽게 얻을 수 있기 때문에 마음만 먹으면 쉽게 활용이 가능하다고 생각한다.</p>
+<p>필자의 경우는 김종민님의 블로그의 내용 그대로 - 3개의 데이터 전용 노드, 1개의 마스터 전용 노드로 클러스터를 구성하였다.</p>
+<br>
+
+<p>다음 포스팅부터는 실제의 설치와 구성에 대해 이야기하겠다.</p>
+<br>
+
+<h2 id="참고자료-및-사이트"><a href="#참고자료-및-사이트" class="headerlink" title="참고자료 및 사이트"></a>참고자료 및 사이트</h2><ul>
+<li><a target="_blank" rel="external nofollow noopener noreferrer" href="https://jpub.tistory.com/756">사이트 신뢰성 엔지니어링</a></li>
+<li><a target="_blank" rel="external nofollow noopener noreferrer" href="https://jpub.tistory.com/857">카프카 핵심 가이드: 실시간 데이터와 스트림 프로세싱</a></li>
+<li><a target="_blank" rel="external nofollow noopener noreferrer" href="http://kimjmin.net/2018/01/2018-01-setting-es-cluster-1/">김종민님 블로그</a> </li>
+</ul>
+</div><div class="article__tags"><a class="article__tags__item" href="/tags/elasticsearch/">elasticsearch</a><a class="article__tags__item" href="/tags/logstash/">logstash</a><a class="article__tags__item" href="/tags/kibana/">kibana</a><a class="article__tags__item" href="/tags/monitoring/">monitoring</a><a class="article__tags__item" href="/tags/log/">log</a><a class="article__tags__item" href="/tags/metric/">metric</a><a class="article__tags__item" href="/tags/kafka/">kafka</a><a class="article__tags__item" href="/tags/zookeeper/">zookeeper</a></div><div class="article__author" itemscope itemprop="author" itemtype="https://schema.org/Person"><img class="article__author__image" src="/images/greg_lee_c.png" alt="Lee Hee Chang"><a class="article__author__link" title="About Lee Hee Chang" rel="author">Lee Hee Chang</a><p class="article__author__desc">greg.lee 의 프로그래밍과 여러 생각에 대해 끄적이는 공간입니다.</p><div class="article__author__socials"></div><meta itemprop="name" content="Lee Hee Chang"></div><div class="sharer" id="sharer"><div class="sharer-inner"><div class="sharer__right"><button class="sharer__item" id="sharer-facebook"><i class="fa fa-facebook-official"></i></button><button class="sharer__item" id="sharer-twitter"><i class="fa fa-twitter"></i></button><button class="sharer__item" id="sharer-pinterest"><i class="fa fa-pinterest"></i></button><button class="sharer__item" id="sharer-pocket"><i class="fa fa-get-pocket"></i></button></div></div></div><!-- Disqus Code--><!-- Meta Tags for Structured Data--><meta itemprop="dateModified" content="2022-05-07T15:25:27.221Z"><meta itemprop="articleBody" content="모니터링의 중요성모니터링?IT 업무를 하면서 모니터링이라는 용어를 접해보지 않은 사람은 없을 것이다. 
+사놓기만 하고 아직 제대로 읽어보지 못한 사이트 신뢰성 엔지니어링 에서는 모니터링에 대한 정의를 아래와 같이 말하고 있다. 
+
+쿼리의 수와 종류, 에러의 수와 종류, 처리 시간 및 서버의 활동 시간 등 시스템에 대한 정량적 실시간 데이터를 모으고..."><meta itemprop="url" content="https://daniel-hebn.github.io/2019/10/18/2019-10-18-elk-&amp;-kafka-기반의-로그-수집-및-모니터링-구축-(1)/"><meta itemprop="mainEntityOfPage" content="https://daniel-hebn.github.io/2019/10/18/2019-10-18-elk-&amp;-kafka-기반의-로그-수집-및-모니터링-구축-(1)/"><div itemscope itemtype="https://schema.org/Organization" itemprop="publisher"><meta itemprop="name" content="greg.lee's blog"><div itemscope itemprop="logo" itemtype="https://schema.org/ImageObject"><meta itemprop="url" content="https://daniel-hebn.github.io/images/rocket.png"></div></div><div itemscope itemtype="https://schema.org/ImageObject" itemprop="image"><meta itemprop="contentUrl" content="https://daniel-hebn.github.io/images/logo/elastic.png"><meta itemprop="url" content="https://daniel-hebn.github.io/images/logo/elastic.png"><meta itemprop="width" content="360"><meta itemprop="height" content="180"></div></article><section class="related-posts"><h3>Related posts</h3><div class="related-posts__item__wrapper"><a class="related-posts__item" href="/2019/10/20/2019-10-20-elk-&amp;-kafka-%EA%B8%B0%EB%B0%98%EC%9D%98-%EB%A1%9C%EA%B7%B8-%EC%88%98%EC%A7%91-%EB%B0%8F-%EB%AA%A8%EB%8B%88%ED%84%B0%EB%A7%81-%EA%B5%AC%EC%B6%95-(2)/"><div class="related-posts__item__background" style="background-image:url('/images/logo/elastic.png');"></div><div class="related-posts__item__overlay"></div><span class="related-posts__item__title">elk &amp; kafka 기반의 로그 수집 및 모니터링 구축 (2)</span></a></div><div class="related-posts__item__wrapper"><a class="related-posts__item" href="/2019/10/24/2019-10-24-elasticsearch-%EC%9D%B4%EC%8A%88-%EB%8C%80%EC%9D%91-1/"><div class="related-posts__item__background" style="background-image:url('/images/logo/elastic.png');"></div><div class="related-posts__item__overlay"></div><span class="related-posts__item__title">2019-10-24 elasticsearch 이슈 대응 (1)</span></a></div></section></div></div></div><footer id="footer"><div class="widgets"><div class="widgets-inner"><!-- Jade doesn't support dynamic inclusion with `each`.--><!-- So, I just hard coded the file names that will be included.--><div class="widgets__item"><h3 class="widgets__item__heading">Recent posts</h3><ul class="recent-posts"><li class="recent-posts__item"><a href="/2021/09/16/2021-09-16-%EC%A0%9C%ED%92%88-%EA%B0%9C%EB%B0%9C%EC%A0%84%EC%97%90-%EA%B0%80%EC%9E%A5-%EB%A8%BC%EC%A0%80-%EC%83%9D%EA%B0%81%ED%95%B4%EB%B3%B4%EB%A9%B4-%EC%A2%8B%EC%9D%80-%EC%A7%88%EB%AC%B8/">제품 개발전에 가장 먼저 생각해보면 좋은 질문</a></li><li class="recent-posts__item"><a href="/2019/10/24/2019-10-24-elasticsearch-%EC%9D%B4%EC%8A%88-%EB%8C%80%EC%9D%91-1/">2019-10-24 elasticsearch 이슈 대응 (1)</a></li><li class="recent-posts__item"><a href="/2019/10/20/2019-10-20-elk-&amp;-kafka-%EA%B8%B0%EB%B0%98%EC%9D%98-%EB%A1%9C%EA%B7%B8-%EC%88%98%EC%A7%91-%EB%B0%8F-%EB%AA%A8%EB%8B%88%ED%84%B0%EB%A7%81-%EA%B5%AC%EC%B6%95-(2)/">elk &amp; kafka 기반의 로그 수집 및 모니터링 구축 (2)</a></li><li class="recent-posts__item"><a href="/2019/10/18/2019-10-18-elk-&amp;-kafka-%EA%B8%B0%EB%B0%98%EC%9D%98-%EB%A1%9C%EA%B7%B8-%EC%88%98%EC%A7%91-%EB%B0%8F-%EB%AA%A8%EB%8B%88%ED%84%B0%EB%A7%81-%EA%B5%AC%EC%B6%95-(1)/">elk &amp; kafka 기반의 로그 수집 및 모니터링 구축 (1)</a></li><li class="recent-posts__item"><a href="/2018/06/29/2018-06-29-ssh-%EC%82%AC%EC%9A%A9/">ssh 사용</a></li></ul></div><div class="widgets__item"><h3 class="widgets__item__heading">Archives</h3><ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/09/">9월 2021</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">10월 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">6월 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">4월 2018</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">2월 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">1월 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">12월 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">6월 2017</a><span class="archive-list-count">1</span></li></ul></div><div class="widgets__item"><h3 class="widgets__item__heading">Categories</h3><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a><span class="category-list-count">5</span><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/performance/">performance</a><span class="category-list-count">5</span></li></ul></li><li class="category-list-item"><a class="category-list-link" href="/categories/design-pattern/">design-pattern</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/elasticsearch/">elasticsearch</a><span class="category-list-count">3</span><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/elasticsearch/maintenance/">maintenance</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/elasticsearch/monitoring/">monitoring</a><span class="category-list-count">2</span></li></ul></li><li class="category-list-item"><a class="category-list-link" href="/categories/http/">http</a><span class="category-list-count">1</span><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/http/RESTful/">RESTful</a><span class="category-list-count">1</span></li></ul></li><li class="category-list-item"><a class="category-list-link" href="/categories/java/">java</a><span class="category-list-count">2</span><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/java/concurrency/">concurrency</a><span class="category-list-count">2</span></li></ul></li><li class="category-list-item"><a class="category-list-link" href="/categories/spring/">spring</a><span class="category-list-count">1</span><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/spring/transaction/">transaction</a><span class="category-list-count">1</span></li></ul></li><li class="category-list-item"><a class="category-list-link" href="/categories/ssh/">ssh</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/%EC%9D%BC%ED%95%98%EB%8A%94%EB%B0%A9%EC%8B%9D/">일하는방식</a><span class="category-list-count">1</span><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/%EC%9D%BC%ED%95%98%EB%8A%94%EB%B0%A9%EC%8B%9D/%EC%A7%88%EB%AC%B8%ED%95%98%EA%B8%B0/">질문하기</a><span class="category-list-count">1</span></li></ul></li></ul></div></div></div><p class="copyright"><small>© 2022 Lee Hee Chang<br>Powered by <a href="https://hexo.io" rel="external nofollow noopener noreferrer" target="_blank">Hexo</a>, Theme by <a href="https://github.com/hyunseob" rel="external nofollow noopener noreferrer" target="_blank">HyunSeob</a></small></p></footer><script src="/js/sharer.min.js"></script></body></html>
